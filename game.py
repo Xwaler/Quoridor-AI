@@ -503,17 +503,12 @@ if __name__ == '__main__':
                     T_dones = torch.stack(T_dones).to(device)
 
                     with torch.no_grad():
-                        # Get current states from minibatch, then query NN model for Q values
                         T_current_qs_list = net(T_current_states)
-
-                        # Get future states from minibatch, then query NN model for Q values
-                        # When using target network, query it, otherwise main network should be queried
                         T_future_qs_list = target_net(T_new_current_states)
 
                     X = torch.empty((BATCH_SIZE, 6, BOARD_SIZE, BOARD_SIZE), dtype=torch.float, device=device)
                     y = torch.empty((BATCH_SIZE, 22), dtype=torch.float, device=device)
 
-                    # Now we need to enumerate our batches
                     for index in range(BATCH_SIZE):
                         T_current_state = T_current_states[index]
                         T_action = T_actions[index]
@@ -521,8 +516,6 @@ if __name__ == '__main__':
                         T_new_current_state = T_new_current_states[index]
                         T_done = T_dones[index]
 
-                        # If not a terminal state, get new q from future states, otherwise set it to 0
-                        # almost like with Q Learning, but we use just part of equation here
                         T_current_qs = T_current_qs_list[index]
                         T_future_qs = T_future_qs_list[index]
 
@@ -538,10 +531,8 @@ if __name__ == '__main__':
                             else:
                                 new_q = T_reward
 
-                            # Update Q value for given state
                             T_current_qs[start + torch.argmax(T_action[start: start + length])] = new_q
 
-                        # And append to our training data
                         X[index] = T_current_state
                         y[index] = T_current_qs
 
@@ -552,7 +543,6 @@ if __name__ == '__main__':
                     loss.backward()
                     optimizer.step()
 
-                    torch.cuda.synchronize(device)
                     losses.append(loss.item())
 
                 if done:
